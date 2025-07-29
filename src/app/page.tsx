@@ -14,8 +14,8 @@ export default function Home() {
   const handleDisconnect = useCallback(() => {
     setConnectionStatus('disconnected');
     try {
-      // Hapus riwayat hanya jika diperlukan saat memutuskan sambungan
-      // localStorage.removeItem('chatterjet-history');
+      // Hapus riwayat saat memutuskan sambungan untuk sesi baru
+      localStorage.removeItem('chatterjet-history');
     } catch (error) {
       console.error('Failed to remove chat history from localStorage', error);
     }
