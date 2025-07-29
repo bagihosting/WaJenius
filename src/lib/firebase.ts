@@ -1,7 +1,6 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseOptions } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import admin from 'firebase-admin';
 
 // Klien-sisi Firebase Config
 const firebaseConfig: FirebaseOptions = {
@@ -19,14 +18,26 @@ const firebaseConfig: FirebaseOptions = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const firestore = getFirestore(app);
 
-// --- Inisialisasi Admin SDK ---
-// Inisialisasi Firebase Admin untuk sisi server (backend)
+// --- Inisialisasi Admin SDK (Hanya Sisi Server) ---
+let adminInstance: import('firebase-admin').app.App | undefined;
+
 function getAdminApp() {
-    if (admin.apps.length > 0) {
-        return admin.app();
+    if (typeof window !== 'undefined') {
+        // Jangan pernah menjalankan ini di klien
+        return null;
     }
     
-    // Memerlukan variabel lingkungan untuk otentikasi
+    if (adminInstance) {
+        return adminInstance;
+    }
+
+    const admin = require('firebase-admin');
+    
+    if (admin.apps.length > 0) {
+        adminInstance = admin.app();
+        return adminInstance;
+    }
+    
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
     if (!serviceAccount) {
@@ -35,18 +46,24 @@ function getAdminApp() {
 
     try {
         const credentials = JSON.parse(serviceAccount);
-        return admin.initializeApp({
+        adminInstance = admin.initializeApp({
             credential: admin.credential.cert(credentials),
             projectId: firebaseConfig.projectId,
         });
+        return adminInstance;
     } catch (error) {
         console.error('Gagal mem-parsing FIREBASE_SERVICE_ACCOUNT_KEY:', error);
         throw new Error('Kredensial akun layanan Firebase tidak valid.');
     }
 }
 
+
 function getAdminFirestore() {
-    return getAdminApp().firestore();
+    const adminApp = getAdminApp();
+    if (!adminApp) {
+        throw new Error('Firebase Admin SDK tidak dapat diinisialisasi di klien.');
+    }
+    return adminApp.firestore();
 }
 
 export { app, firestore, getAdminFirestore };
