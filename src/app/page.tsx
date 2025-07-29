@@ -1,22 +1,32 @@
 'use client';
 
-import { useState } from 'react';
-import { QrConnect } from '@/components/qr-connect';
+import { useState, useCallback } from 'react';
+import { QrConnect, type ConnectionStatus } from '@/components/qr-connect';
 import { ChatLayout } from '@/components/chat-layout';
 
 export default function Home() {
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
 
-  const handleConnect = () => {
-    setIsConnected(true);
-  };
+  const handleConnect = useCallback(() => {
+    setConnectionStatus('connected');
+  }, []);
+
+  const handleDisconnect = useCallback(() => {
+    setConnectionStatus('disconnected');
+    // Also clear chat history from local storage if desired
+    try {
+      localStorage.removeItem('chatterjet-history');
+    } catch (error) {
+      console.error('Failed to remove chat history from localStorage', error);
+    }
+  }, []);
 
   return (
     <main className="flex h-screen w-full flex-col items-center justify-center">
-      {isConnected ? (
-        <ChatLayout />
+      {connectionStatus === 'connected' ? (
+        <ChatLayout onDisconnect={handleDisconnect} />
       ) : (
-        <QrConnect onConnect={handleConnect} />
+        <QrConnect onConnect={handleConnect} setConnectionStatus={setConnectionStatus} connectionStatus={connectionStatus} />
       )}
     </main>
   );

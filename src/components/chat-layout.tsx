@@ -11,10 +11,17 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from './ui/button';
+import { LogOut, MoreVertical } from 'lucide-react';
 
 const fixedRules = "Jika pengguna bertanya tentang cuaca, katakan Anda tidak tahu. Jika pengguna menyapa, balas sapaan dengan ramah. Untuk pertanyaan lain, katakan 'Saya adalah bot sederhana'.";
 
-export function ChatLayout() {
+type ChatLayoutProps = {
+  onDisconnect: () => void;
+};
+
+export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
   const [messages, setMessages] = useState<MessageType[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
@@ -98,7 +105,7 @@ export function ChatLayout() {
   
   return (
     <div className="flex flex-col h-screen w-full max-w-4xl bg-card border-x shadow-2xl animate-in fade-in duration-500">
-      <header className="flex items-center p-4 border-b shrink-0">
+      <header className="flex items-center justify-between p-4 border-b shrink-0">
         <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-primary/50">
                 <Image src="https://placehold.co/48x48.png" alt="ChatterJet Logo" width={48} height={48} data-ai-hint="logo abstract" />
@@ -117,6 +124,20 @@ export function ChatLayout() {
                 </div>
             </div>
         </div>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-5 w-5" />
+                    <span className="sr-only">Opsi</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onDisconnect} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Putuskan Sambungan</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
       </header>
       <MessageList messages={messages} isBotReplying={isBotReplying} />
       <MessageInput
