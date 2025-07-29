@@ -5,7 +5,7 @@ import { generateAutomaticReply } from '@/ai/flows/automatic-replies';
 import crypto from 'crypto';
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
-const GRAPH_API_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
+const APP_SECRET = process.env.WHATSAPP_APP_SECRET; // More secure for production
 
 /**
  * Verifies the webhook subscription.
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`Processing message from ${from}: "${text}"`);
       
-      const rules = "Anda adalah asisten AI yang ramah. Jawab pertanyaan dengan singkat dan jelas. Jika Anda tidak tahu jawabannya, katakan Anda akan mencarinya.";
+      const rules = "Anda adalah asisten AI yang ramah dan membantu untuk ChatterJet. Jawab pertanyaan dengan singkat dan jelas. Jika Anda tidak tahu jawabannya, katakan Anda akan mencarinya.";
       const { reply } = await generateAutomaticReply({ message: text, rules });
       
       await sendWhatsappMessage(from, reply);
@@ -85,16 +85,20 @@ export async function POST(request: NextRequest) {
  * @returns True if the signature is valid, false otherwise.
  */
 function verifySignature(body: string, signature: string): boolean {
-    if (!GRAPH_API_TOKEN) {
-        console.warn('GRAPH_API_TOKEN is not set. Signature verification skipped.');
-        // In a real production environment, you might want to fail this check if the token is missing.
-        // For development and ease of testing, we can allow it to pass.
+    const secret = APP_SECRET;
+    if (!secret) {
+        console.warn('WHATSAPP_APP_SECRET is not set. Signature verification skipped. This is not secure for production.');
+        // In a real production environment, you should fail this check if the secret is missing.
         return true;
     }
     
-    const hmac = crypto.createHmac('sha256', GRAPH_API_TOKEN);
+    const hmac = crypto.createHmac('sha256', secret);
     hmac.update(body);
     const calculatedSignature = `sha256=${hmac.digest('hex')}`;
     
-    return calculatedSignature === signature;
+    const bufferSignature = Buffer.from(signature);
+    const bufferCalculatedSignature = Buffer.from(calculatedSignature);
+    
+    // Use crypto.timingSafeEqual to prevent timing attacks.
+    return crypto.timingSafeEqual(bufferSignature, bufferCalculatedSignature);
 }
