@@ -20,35 +20,35 @@ type QrConnectProps = {
 const statusInfo = {
     disconnected: {
         title: "Hubungkan dengan WhatsApp",
-        description: "Pindai kode QR ini dengan ponsel Anda untuk memulai.",
+        description: "Bot terhubung melalui API, bukan QR Code. Klik untuk menyimulasikan koneksi dan masuk ke dasbor.",
         icon: <QrCode className="mr-2" />,
-        buttonText: "Mulai Memindai",
+        buttonText: "Hubungkan ke Dasbor",
         color: ""
     },
     scanning: {
-        title: "Pindai Kode QR",
-        description: "Buka WhatsApp di ponsel Anda, ketuk Menu > Perangkat Tertaut > Tautkan Perangkat.",
+        title: "Menyimulasikan Koneksi...",
+        description: "Menghubungkan ke WhatsApp Business API...",
         icon: <Loader2 className="mr-2 animate-spin" />,
-        buttonText: "Menunggu Pindaian...",
+        buttonText: "Menghubungkan...",
         color: "text-blue-500"
     },
     connecting: {
-        title: "Menghubungkan...",
-        description: "Harap tunggu, koneksi sedang dibuat.",
+        title: "Memverifikasi Kredensial...",
+        description: "Harap tunggu, koneksi API sedang dibuat.",
         icon: <Loader2 className="mr-2 animate-spin" />,
         buttonText: "Menghubungkan...",
         color: "text-yellow-500"
     },
     connected: {
         title: "Terhubung!",
-        description: "Anda berhasil terhubung dengan WhatsApp.",
+        description: "Koneksi API berhasil. Anda akan diarahkan ke dasbor.",
         icon: <Check className="mr-2" />,
         buttonText: "Selesai",
         color: "text-green-500"
     },
     error: {
         title: "Koneksi Gagal",
-        description: "Gagal terhubung. Silakan coba lagi.",
+        description: "Gagal terhubung. Pastikan kredensial API Anda di file .env benar.",
         icon: <X className="mr-2" />,
         buttonText: "Coba Lagi",
         color: "text-red-500"
@@ -56,27 +56,26 @@ const statusInfo = {
 }
 
 export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: QrConnectProps) {
-  const [qrKey, setQrKey] = useState<number | null>(null);
+  const [showQr, setShowQr] = useState(false);
   const currentStatus = statusInfo[connectionStatus];
-
-  useEffect(() => {
-    // Generate QR key only on the client-side to avoid hydration mismatch
-    setQrKey(Date.now());
-  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (connectionStatus === 'scanning') {
-      timer = setTimeout(() => setConnectionStatus('connecting'), 4000);
+      // Show QR for a bit for visual effect, then proceed
+      setShowQr(true);
+      timer = setTimeout(() => setConnectionStatus('connecting'), 2000);
     } else if (connectionStatus === 'connecting') {
+      setShowQr(false);
       timer = setTimeout(() => {
-        // Randomly succeed or fail for a more realistic feel
-        Math.random() > 0.2 ? setConnectionStatus('connected') : setConnectionStatus('error');
-      }, 3000);
+        setConnectionStatus('connected');
+      }, 2000);
     } else if(connectionStatus === 'connected') {
         timer = setTimeout(() => {
             onConnect();
         }, 1500);
+    } else {
+      setShowQr(connectionStatus === 'disconnected');
     }
 
     return () => clearTimeout(timer);
@@ -84,7 +83,6 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
   
   const handleButtonClick = () => {
     if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
-      setQrKey(Date.now());
       setConnectionStatus('scanning');
     }
   };
@@ -102,22 +100,18 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-6">
         <div className={cn("p-2 bg-white rounded-lg border-2 shadow-inner transition-opacity duration-300", 
-          (connectionStatus !== 'disconnected' && connectionStatus !== 'scanning') && 'opacity-20'
+          !showQr && 'opacity-20'
         )}>
-          {qrKey ? (
-            <Image
-                key={qrKey}
-                src={`https://placehold.co/256x256.png?t=${qrKey}`}
-                alt="QR Code"
-                width={256}
-                height={256}
-                priority
-                data-ai-hint="QR code"
-                className="rounded-md"
-            />
-          ) : (
-            <Skeleton className="w-[256px] h-[256px] rounded-md" />
-          )}
+          {/* This QR is purely for visual simulation */}
+          <Image
+              src={`https://placehold.co/256x256.png`}
+              alt="Simulasi QR Code"
+              width={256}
+              height={256}
+              priority
+              data-ai-hint="QR code"
+              className="rounded-md"
+          />
         </div>
         <Button 
           onClick={handleButtonClick} 
