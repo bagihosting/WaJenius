@@ -18,6 +18,22 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // Jangan menjalankan ini di server
+    if (!isServer) {
+        // Mengabaikan modul khusus server di sisi klien
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            'child_process': false,
+            'http2': false,
+            'fs': false,
+            'os': false,
+            'crypto': false,
+        };
+    }
+
+    return config;
+  }
 };
 
 export default nextConfig;
