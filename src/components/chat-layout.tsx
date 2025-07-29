@@ -15,7 +15,8 @@ import { Button } from './ui/button';
 import { LogOut, MoreVertical } from 'lucide-react';
 import { sendWhatsappMessage } from '@/lib/whatsapp-service';
 
-const fixedRules = "Jika pengguna bertanya tentang cuaca, katakan Anda tidak tahu. Jika pengguna menyapa, balas sapaan dengan ramah. Untuk pertanyaan lain, katakan 'Saya adalah bot sederhana'.";
+// Aturan ini sekarang lebih umum, karena logika utama ada di webhook.
+const fixedRules = "Anda adalah asisten AI yang ramah. Jawab pertanyaan dengan singkat dan jelas. Jika Anda tidak tahu jawabannya, katakan Anda akan mencarinya.";
 
 type ChatLayoutProps = {
   onDisconnect: () => void;
@@ -54,23 +55,22 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
-    // Nomor telepon pengguna akan dibutuhkan di sini. Untuk saat ini, kita gunakan placeholder.
-    const userPhoneNumber = 'USER_PHONE_NUMBER_PLACEHOLDER'; 
+    // Untuk UI, kita asumsikan nomor telepon bot adalah penerimanya.
+    const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER_ID || 'WHATSAPP_BOT';
 
-    const userMessage: MessageType = { id: crypto.randomUUID(), text, sender: 'user', recipient: userPhoneNumber };
+    const userMessage: MessageType = { id: crypto.randomUUID(), text, sender: 'user', recipient: botPhoneNumber };
     setMessages(prev => [...prev, userMessage]);
     setIsBotReplying(true);
     setSmartReplies([]);
 
     try {
-      // 1. Hasilkan balasan otomatis menggunakan AI
+      // Di UI, kita mensimulasikan bot merespons, tetapi logika sebenarnya ada di webhook.
       const { reply } = await generateAutomaticReply({ message: text, rules: fixedRules });
-      const botMessage: MessageType = { id: crypto.randomUUID(), text: reply, sender: 'bot', recipient: userPhoneNumber };
+      const botMessage: MessageType = { id: crypto.randomUUID(), text: reply, sender: 'bot', recipient: 'user' };
       
-      // 2. Kirim balasan ke WhatsApp
-      await sendWhatsappMessage(userPhoneNumber, reply);
-
-      // 3. Perbarui UI dengan balasan bot dan saran balasan cerdas
+      // UI diperbarui untuk menampilkan percakapan, tetapi tidak lagi mengirim pesan dari sini.
+      // Pengiriman pesan kini ditangani oleh interaksi pengguna langsung dengan nomor WhatsApp Anda.
+      
       const fullHistory = [...messages, userMessage, botMessage];
       setMessages(fullHistory);
       
@@ -79,18 +79,16 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
       setSmartReplies(suggestedReplies);
 
     } catch (error) {
-      console.error("Error generating or sending reply:", error);
-      const errorMessageText = (error instanceof Error && error.message.includes('WhatsApp'))
-        ? "Gagal mengirim pesan ke WhatsApp."
-        : "Maaf, terjadi kesalahan saat menghasilkan balasan.";
+      console.error("Error generating reply for UI:", error);
+      const errorMessageText = "Maaf, terjadi kesalahan saat menghasilkan pratinjau balasan.";
         
-      const errorMessage: MessageType = { id: crypto.randomUUID(), text: errorMessageText, sender: 'bot', recipient: userPhoneNumber };
+      const errorMessage: MessageType = { id: crypto.randomUUID(), text: errorMessageText, sender: 'bot', recipient: 'user' };
       setMessages(prev => [...prev, errorMessage]);
       
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Gagal berkomunikasi dengan AI atau WhatsApp.",
+        description: "Gagal berkomunikasi dengan AI.",
       });
     } finally {
       setIsBotReplying(false);
