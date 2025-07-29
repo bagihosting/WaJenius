@@ -126,17 +126,92 @@ sudo pm2 startup
 
 ### Langkah 7: Konfigurasi Webhook di Meta Developer Dashboard
 
-Aplikasi Anda sekarang berjalan di `http://[ALAMAT_IP_SERVER_ANDA]:9002`.
+Aplikasi Anda sekarang berjalan di `http://[ALAMAT_IP_SERVER_ANDA]:9002`. Namun, untuk produksi, Anda harus menggunakan URL HTTPS yang disediakan oleh Nginx dan subdomain Anda.
 
-1.  **URL Webhook:** Alamat lengkap webhook Anda adalah `http://[ALAMAT_IP_SERVER_ANDA]:9002/api/whatsapp/webhook`.
-    *   **Catatan Penting:** WhatsApp memerlukan URL webhook yang menggunakan **HTTPS**. Jika Anda belum memiliki domain dengan sertifikat SSL, Anda bisa menggunakan layanan seperti [ngrok](https://ngrok.com/) untuk sementara waktu selama pengembangan untuk mendapatkan URL HTTPS. Untuk produksi, sangat disarankan untuk menggunakan web server seperti Nginx sebagai *reverse proxy* dan mengkonfigurasi SSL dengan Let's Encrypt.
-
+1.  **URL Webhook:** Alamat lengkap webhook Anda seharusnya `https://[SUBDOMAIN_ANDA]/api/whatsapp/webhook`.
 2.  **Konfigurasi di Meta:**
     *   Buka Pengaturan Aplikasi Meta Anda -> Produk -> WhatsApp -> Konfigurasi.
     *   Klik "Edit" pada bagian Webhooks.
-    *   Masukkan **URL Webhook** Anda.
+    *   Masukkan **URL Webhook** HTTPS Anda.
     *   Masukkan **Verify Token** yang sama dengan yang Anda tulis di file `.env`.
     *   Klik "Verify and Save".
     *   Setelah terverifikasi, klik "Manage" dan pastikan Anda berlangganan (`subscribe`) ke event `messages`.
 
 Aplikasi Anda sekarang sepenuhnya terhubung dan siap merespons pesan WhatsApp secara otomatis.
+
+### Langkah 8: (Opsional tapi Sangat Direkomendasikan) Konfigurasi Nginx dengan Subdomain
+
+Menggunakan Nginx sebagai *reverse proxy* adalah praktik terbaik untuk keamanan dan manajemen.
+
+#### 1. Instal Nginx
+
+```bash
+sudo apt install -y nginx
+```
+
+#### 2. Buat File Konfigurasi Nginx untuk Subdomain Anda
+
+Ganti `bot.domainanda.com` dengan subdomain yang Anda inginkan.
+
+```bash
+sudo nano /etc/nginx/sites-available/chatterjet
+```
+
+Salin dan tempel konfigurasi berikut. Pastikan untuk mengganti `bot.domainanda.com` dengan subdomain Anda.
+
+```nginx
+server {
+    listen 80;
+    server_name bot.domainanda.com;
+
+    location / {
+        proxy_pass http://localhost:9002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+*   `listen 80`: Nginx akan mendengarkan lalu lintas HTTP.
+*   `server_name`: Subdomain yang akan Anda gunakan.
+*   `proxy_pass`: Meneruskan semua permintaan ke aplikasi Next.js Anda yang berjalan di port 9002.
+
+#### 3. Aktifkan Konfigurasi
+
+Buat *symbolic link* dari konfigurasi Anda ke direktori `sites-enabled`.
+
+```bash
+sudo ln -s /etc/nginx/sites-available/chatterjet /etc/nginx/sites-enabled/
+```
+
+Periksa apakah konfigurasi Nginx Anda valid:
+
+```bash
+sudo nginx -t
+```
+
+Jika tidak ada error, restart Nginx untuk menerapkan perubahan:
+
+```bash
+sudo systemctl restart nginx
+```
+
+#### 4. Dapatkan Sertifikat SSL (HTTPS) dengan Certbot
+
+WhatsApp **mewajibkan** webhook menggunakan HTTPS. Cara termudah adalah menggunakan Let's Encrypt.
+
+Instal Certbot:
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+```
+
+Jalankan Certbot untuk Nginx. Ganti `bot.domainanda.com` dengan subdomain Anda.
+```bash
+sudo certbot --nginx -d bot.domainanda.com
+```
+Certbot akan secara otomatis mengedit file konfigurasi Nginx Anda untuk menambahkan pengaturan SSL dan mengatur pembaruan otomatis.
+
+Setelah selesai, Nginx akan melayani aplikasi Anda di `https://bot.domainanda.com`.
