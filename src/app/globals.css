@@ -4,37 +4,37 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 224 71% 4%;
+    --background: 240 10% 99%; /* Alice Blue */
+    --foreground: 240 64% 8%; /* Dark Slate Blue */
 
-    --card: 210 40% 98%;
-    --card-foreground: 224 71% 4%;
+    --card: 240 10% 99%;
+    --card-foreground: 240 64% 8%;
  
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover: 240 10% 99%;
+    --popover-foreground: 240 64% 8%;
  
-    --primary: 221 83% 53%;
+    --primary: 255 75% 41%; /* Indigo */
     --primary-foreground: 210 40% 98%;
  
-    --secondary: 210 40% 91.4%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 10% 91.4%;
+    --secondary-foreground: 240 64% 8%;
  
-    --muted: 210 40% 91.4%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 10% 91.4%;
+    --muted-foreground: 240 4% 46%;
  
-    --accent: 210 40% 91.4%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 271 76% 53%; /* Soft Violet */
+    --accent-foreground: 210 40% 98%;
  
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --border: 240 5% 85%;
+    --input: 240 5% 90%;
+    --ring: 255 75% 41%;
 
     --radius: 0.5rem;
 
-    --user-message-background: 221 83% 53%;
+    --user-message-background: 255 75% 41%;
     --user-message-foreground: 210 40% 98%;
   }
  

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Check, Loader2, QrCode, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
 
 export type ConnectionStatus = 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error';
 
@@ -54,8 +56,13 @@ const statusInfo = {
 }
 
 export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: QrConnectProps) {
-  const [qrKey, setQrKey] = useState(Date.now());
+  const [qrKey, setQrKey] = useState<number | null>(null);
   const currentStatus = statusInfo[connectionStatus];
+
+  useEffect(() => {
+    // Generate QR key only on the client-side to avoid hydration mismatch
+    setQrKey(Date.now());
+  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -97,16 +104,20 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
         <div className={cn("p-2 bg-white rounded-lg border-2 shadow-inner transition-opacity duration-300", 
           (connectionStatus !== 'disconnected' && connectionStatus !== 'scanning') && 'opacity-20'
         )}>
-          <Image
-            key={qrKey}
-            src={`https://placehold.co/256x256.png?t=${qrKey}`}
-            alt="QR Code"
-            width={256}
-            height={256}
-            priority
-            data-ai-hint="QR code"
-            className="rounded-md"
-          />
+          {qrKey ? (
+            <Image
+                key={qrKey}
+                src={`https://placehold.co/256x256.png?t=${qrKey}`}
+                alt="QR Code"
+                width={256}
+                height={256}
+                priority
+                data-ai-hint="QR code"
+                className="rounded-md"
+            />
+          ) : (
+            <Skeleton className="w-[256px] h-[256px] rounded-md" />
+          )}
         </div>
         <Button 
           onClick={handleButtonClick} 
