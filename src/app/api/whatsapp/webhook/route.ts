@@ -5,7 +5,7 @@ import { generateAutomaticReply } from '@/ai/flows/automatic-replies';
 import crypto from 'crypto';
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
-const APP_SECRET = process.env.WHATSAPP_APP_SECRET; // More secure for production
+const APP_SECRET = process.env.WHATSAPP_APP_SECRET; 
 
 /**
  * Verifies the webhook subscription.
@@ -86,8 +86,9 @@ export async function POST(request: NextRequest) {
  */
 function verifySignature(body: string, signature: string): boolean {
     const secret = APP_SECRET;
-    if (!secret) {
+    if (!secret || secret === 'YOUR_APP_SECRET') {
         console.warn('WHATSAPP_APP_SECRET is not set. Signature verification skipped. This is not secure for production.');
+        // For development, we allow requests without a secret. 
         // In a real production environment, you should fail this check if the secret is missing.
         return true;
     }
@@ -96,9 +97,10 @@ function verifySignature(body: string, signature: string): boolean {
     hmac.update(body);
     const calculatedSignature = `sha256=${hmac.digest('hex')}`;
     
-    const bufferSignature = Buffer.from(signature);
-    const bufferCalculatedSignature = Buffer.from(calculatedSignature);
+    try {
+      const bufferSignature = Buffer.from(signature);
+      const bufferCalculatedSignature = Buffer.from(calculatedSignature);
+      
+      // Use crypto.timingSafeEqual to prevent timing attacks.
+      return crypto.timingSafeEqual(bufferSignature, bufferCalculatedSignature);
     
-    // Use crypto.timingSafeEqual to prevent timing attacks.
-    return crypto.timingSafeEqual(bufferSignature, bufferCalculatedSignature);
-}
