@@ -1,4 +1,4 @@
-# ChatterJet - WhatsApp Bot
+# WartaBot - WhatsApp Bot
 
 Ini adalah aplikasi dasbor dan backend untuk bot WhatsApp yang didukung oleh AI, dibangun menggunakan Next.js dan Genkit.
 
@@ -53,8 +53,8 @@ sudo apt install -y git
 Clone kode proyek Anda ke server. Ganti `[URL_GIT_REPOSITORY_ANDA]` dengan URL repositori Git Anda.
 
 ```bash
-git clone [URL_GIT_REPOSITORY_ANDA] chatterjet
-cd chatterjet
+git clone [URL_GIT_REPOSITORY_ANDA] wartabot
+cd wartabot
 ```
 
 ### Langkah 4: Konfigurasi Variabel Lingkungan (.env)
@@ -110,10 +110,10 @@ sudo npm install pm2 -g
 Jalankan aplikasi Anda menggunakan `pm2`.
 
 ```bash
-pm2 start npm --name "chatterjet" -- start -p 9002
+pm2 start npm --name "wartabot" -- start -p 9002
 ```
 
-*   `--name "chatterjet"`: Memberi nama pada proses Anda.
+*   `--name "wartabot"`: Memberi nama pada proses Anda.
 *   `-- start`: Menjalankan skrip `start` dari `package.json`.
 *   `-p 9002`: Menjalankan aplikasi di port 9002. Anda bisa mengubah ini jika perlu.
 
@@ -154,7 +154,7 @@ sudo apt install -y nginx
 Ganti `bot.domainanda.com` dengan subdomain yang Anda inginkan.
 
 ```bash
-sudo nano /etc/nginx/sites-available/chatterjet
+sudo nano /etc/nginx/sites-available/wartabot
 ```
 
 Salin dan tempel konfigurasi berikut. Pastikan untuk mengganti `bot.domainanda.com` dengan subdomain Anda.
@@ -184,7 +184,7 @@ server {
 Buat *symbolic link* dari konfigurasi Anda ke direktori `sites-enabled`.
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/chatterjet /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/wartabot /etc/nginx/sites-enabled/
 ```
 
 Periksa apakah konfigurasi Nginx Anda valid:

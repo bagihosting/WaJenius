@@ -58,6 +58,12 @@ const statusInfo = {
 export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: QrConnectProps) {
   const [showQr, setShowQr] = useState(false);
   const currentStatus = statusInfo[connectionStatus];
+  const [qrKey, setQrKey] = useState('');
+
+  useEffect(() => {
+    // This will only run on the client, after initial hydration
+    setQrKey(Date.now().toString());
+  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -68,7 +74,12 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
     } else if (connectionStatus === 'connecting') {
       setShowQr(false);
       timer = setTimeout(() => {
-        setConnectionStatus('connected');
+        // Check for an environment variable to simulate connection error
+        if (process.env.NEXT_PUBLIC_SIMULATE_WHATSAPP_CONNECTION_ERROR === 'true') {
+            setConnectionStatus('error');
+        } else {
+            setConnectionStatus('connected');
+        }
       }, 2000);
     } else if(connectionStatus === 'connected') {
         timer = setTimeout(() => {
@@ -91,7 +102,7 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
     <Card className="w-full max-w-md mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
       <CardHeader className="text-center pb-4">
         <div className="flex justify-center items-center mb-4">
-            <Image src="/logo.svg" alt="ChatterJet Logo" width="64" height="64" />
+            <Image src="/logo.svg" alt="WartaBot Logo" width="64" height="64" />
         </div>
         <CardTitle className={cn("text-2xl font-bold tracking-tight transition-colors", currentStatus.color)}>
           {currentStatus.title}
@@ -103,15 +114,20 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
           !showQr && 'opacity-20'
         )}>
           {/* This QR is purely for visual simulation */}
-          <Image
-              src={`https://placehold.co/256x256.png`}
-              alt="Simulasi QR Code"
-              width={256}
-              height={256}
-              priority
-              data-ai-hint="QR code"
-              className="rounded-md"
-          />
+           {qrKey ? (
+            <Image
+                key={qrKey}
+                src={`https://placehold.co/256x256.png`}
+                alt="Simulasi QR Code"
+                width={256}
+                height={256}
+                priority
+                data-ai-hint="QR code"
+                className="rounded-md"
+            />
+           ) : (
+            <Skeleton className="h-[256px] w-[256px] rounded-md" />
+           )}
         </div>
         <Button 
           onClick={handleButtonClick} 

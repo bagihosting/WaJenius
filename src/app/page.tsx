@@ -19,7 +19,7 @@ export default function Home() {
   const renderContent = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <ConnectionSuccess onDisconnect={handleDisconnect} />;
+        return <ChatLayout onDisconnect={handleDisconnect} />;
       case 'disconnected':
       case 'scanning':
       case 'connecting':

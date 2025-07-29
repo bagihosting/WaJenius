@@ -20,7 +20,7 @@ type ChatLayoutProps = {
 
 const BOT_USER = {
     id: 'bot',
-    name: 'ChatterJet',
+    name: 'WartaBot',
     avatar: '/logo.svg',
 };
 
@@ -42,7 +42,7 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
   useEffect(() => {
     // Load chat history from localStorage on mount
     try {
-      const savedHistory = localStorage.getItem('chatterjet-history');
+      const savedHistory = localStorage.getItem('wartabot-history');
       if (savedHistory) {
         setMessages(JSON.parse(savedHistory));
       } else {
@@ -50,7 +50,7 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
         setMessages([
           {
             id: 'init-message',
-            text: `Halo! Ini adalah dasbor ChatterJet. Anda dapat mengirim pesan ke nomor pengujian (${recipientPhoneNumber}) dari sini untuk memeriksa fungsionalitas.`,
+            text: `Halo! Ini adalah dasbor WartaBot. Anda dapat mengirim pesan ke nomor pengujian (${recipientPhoneNumber}) dari sini untuk memeriksa fungsionalitas.`,
             sender: 'bot',
           },
         ]);
@@ -64,7 +64,7 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
   // Save history to localStorage whenever messages change
   useEffect(() => {
     try {
-      localStorage.setItem('chatterjet-history', JSON.stringify(messages));
+      localStorage.setItem('wartabot-history', JSON.stringify(messages));
     } catch (error) {
         console.error('Failed to save chat history', error);
     }
@@ -148,11 +148,11 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
       <header className="flex items-center justify-between p-4 border-b shrink-0">
         <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-primary/50">
-                <AvatarImage src={'/logo.svg'} alt="ChatterJet Logo" />
-                <AvatarFallback>CJ</AvatarFallback>
+                <AvatarImage src={'/logo.svg'} alt="WartaBot Logo" />
+                <AvatarFallback>WB</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-foreground">ChatterJet Dashboard</h1>
+                <h1 className="text-xl font-bold text-foreground">WartaBot Dashboard</h1>
                 <div className="flex items-center gap-2">
                     <Badge variant="outline" className="border-green-500/40 text-green-600 bg-green-500/10">
                         <span className="relative flex h-2 w-2 mr-2">
