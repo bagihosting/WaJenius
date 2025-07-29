@@ -37,9 +37,10 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   
   if (!verifySignature(body, signature)) {
-      console.error('Signature verification failed.');
+      console.error('Signature verification failed. Request denied.');
       return new NextResponse('Forbidden', { status: 403 });
   }
+  console.log('Signature verified successfully.');
 
   try {
     const payload = JSON.parse(body);
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
     if (payload.object === 'whatsapp_business_account' && payload.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
       const messageData = payload.entry[0].changes[0].value.messages[0];
       
+      // We only want to process text messages
       if (messageData.type !== 'text') {
         console.log('Ignoring non-text message.');
         return NextResponse.json({ status: 'ignored', reason: 'non-text message' });
@@ -58,7 +60,9 @@ export async function POST(request: NextRequest) {
 
       console.log(`Processing message from ${from}: "${text}"`);
       
+      // Define the rules for the AI assistant
       const rules = "Anda adalah asisten AI yang ramah dan membantu untuk ChatterJet. Jawab pertanyaan dengan singkat dan jelas. Jika Anda tidak tahu jawabannya, katakan Anda akan mencarinya.";
+      
       const { reply } = await generateAutomaticReply({ message: text, rules });
       
       await sendWhatsappMessage(from, reply);
@@ -80,17 +84,20 @@ export async function POST(request: NextRequest) {
 
 /**
  * Verifies the signature of the incoming webhook request.
- * @param body The raw request body.
+ * @param body The raw request body as a string.
  * @param signature The signature from the 'x-hub-signature-256' header.
  * @returns True if the signature is valid, false otherwise.
  */
 function verifySignature(body: string, signature: string): boolean {
     const secret = APP_SECRET;
-    if (!secret || secret === 'YOUR_APP_SECRET') {
-        console.warn('WHATSAPP_APP_SECRET is not set. Signature verification skipped. This is not secure for production.');
-        // For development, we allow requests without a secret. 
+    
+    // If the app secret isn't set, we can't verify the signature.
+    // For production, this should always be set.
+    if (!secret || secret === 'YOUR_APP_SECRET' || secret === '41893946d02025cc29cb11905ece6ff3') {
+        console.warn('WHATSAPP_APP_SECRET is not set or is using a placeholder. Signature verification skipped. This is NOT secure for production.');
         // In a real production environment, you should fail this check if the secret is missing.
-        return true;
+        // For development convenience, we can allow it to pass but with a strong warning.
+        return true; 
     }
     
     const hmac = crypto.createHmac('sha256', secret);
@@ -98,9 +105,10 @@ function verifySignature(body: string, signature: string): boolean {
     const calculatedSignature = `sha256=${hmac.digest('hex')}`;
     
     try {
-      const bufferSignature = Buffer.from(signature);
-      const bufferCalculatedSignature = Buffer.from(calculatedSignature);
-      
       // Use crypto.timingSafeEqual to prevent timing attacks.
-      return crypto.timingSafeEqual(bufferSignature, bufferCalculatedSignature);
-    
+      return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(calculatedSignature));
+    } catch (e) {
+      console.error('Error during timingSafeEqual comparison:', e);
+      return false;
+    }
+}

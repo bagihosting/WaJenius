@@ -50,7 +50,7 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
         setMessages([
           {
             id: 'init-message',
-            text: `Halo! Bot Anda sekarang terhubung dan aktif di WhatsApp. Antarmuka ini berfungsi sebagai dasbor. Anda dapat mengirim pesan ke nomor ${recipientPhoneNumber} dari sini.`,
+            text: `Halo! Ini adalah dasbor ChatterJet. Anda dapat mengirim pesan ke nomor pengujian (${recipientPhoneNumber}) dari sini untuk memeriksa fungsionalitas.`,
             sender: 'bot',
           },
         ]);
@@ -90,9 +90,13 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
         await sendWhatsappMessage(recipientPhoneNumber, text);
 
         // NOTE: The bot's reply will come via the webhook to the user's phone,
-        // not directly back to this UI. We are simulating that the message was sent.
-        // In a real-time app, you'd use WebSockets to get the reply.
+        // not directly back to this UI. This is a simulation that the message was sent.
         console.log('Pesan berhasil dikirim ke WhatsApp. Balasan akan muncul di perangkat pengguna.');
+        toast({
+            title: 'Pesan Terkirim',
+            description: `Pesan Anda telah dikirim ke ${recipientPhoneNumber}. Balasan akan muncul di WhatsApp.`,
+        });
+
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -144,7 +148,7 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
       <header className="flex items-center justify-between p-4 border-b shrink-0">
         <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-primary/50">
-                <AvatarImage src={BOT_USER.avatar} alt="ChatterJet Logo" />
+                <AvatarImage src={'/logo.svg'} alt="ChatterJet Logo" />
                 <AvatarFallback>CJ</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
