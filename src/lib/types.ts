@@ -3,4 +3,5 @@ export type Message = {
   text: string;
   sender: 'user' | 'bot';
   recipient?: string; // Menyimpan nomor telepon penerima
+  timestamp: number; // Unix timestamp
 };

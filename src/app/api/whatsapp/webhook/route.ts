@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendWhatsappMessage } from '@/lib/whatsapp-service';
 import { generateAutomaticReply } from '@/ai/flows/automatic-replies';
+import { saveMessage } from '@/lib/firestore-service';
 import crypto from 'crypto';
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
@@ -59,15 +60,21 @@ export async function POST(request: NextRequest) {
       const text = messageData.text.body;
 
       console.log(`Processing message from ${from}: "${text}"`);
+
+      // 1. Save incoming message to Firestore
+      await saveMessage(from, { text, sender: 'user' });
       
-      // Define the rules for the AI assistant
+      // 2. Generate AI reply
       const rules = "Anda adalah asisten AI yang ramah dan membantu untuk ChatterJet. Jawab pertanyaan dengan singkat dan jelas. Jika Anda tidak tahu jawabannya, katakan Anda akan mencarinya.";
-      
       const { reply } = await generateAutomaticReply({ message: text, rules });
       
+      // 3. Send reply to WhatsApp
       await sendWhatsappMessage(from, reply);
+      
+      // 4. Save bot's reply to Firestore
+      await saveMessage(from, { text: reply, sender: 'bot', recipient: from });
 
-      console.log(`Sent reply to ${from}: "${reply}"`);
+      console.log(`Sent reply to ${from}: "${reply}" and saved to Firestore.`);
 
       return NextResponse.json({ status: 'success' });
     } else {

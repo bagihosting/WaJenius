@@ -13,22 +13,11 @@ import { MessageInput } from './message-input';
 import { generateSmartReplies } from '@/ai/flows/smart-replies';
 import { improvePrompt } from '@/ai/flows/improve-prompt';
 import { sendWhatsappMessage } from '@/lib/whatsapp-service';
+import { saveMessage, getMessages } from '@/lib/firestore-service';
 
 type ChatLayoutProps = {
   onDisconnect: () => void;
 };
-
-const BOT_USER = {
-    id: 'bot',
-    name: 'WartaBot',
-    avatar: '/logo.svg',
-};
-
-const GUEST_USER = {
-    id: 'user',
-    name: 'Guest',
-    avatar: 'https://placehold.co/32x32.png',
-}
 
 export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
   const [messages, setMessages] = useState<MessageType[]>([]);
@@ -39,36 +28,41 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
 
   const recipientPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_RECIPIENT_PHONE_NUMBER || '';
 
+  // Load chat history from Firestore on mount
   useEffect(() => {
-    // Load chat history from localStorage on mount
-    try {
-      const savedHistory = localStorage.getItem('wartabot-history');
-      if (savedHistory) {
-        setMessages(JSON.parse(savedHistory));
-      } else {
-        // Initial bot message if no history
-        setMessages([
-          {
-            id: 'init-message',
-            text: `Halo! Ini adalah dasbor WartaBot. Anda dapat mengirim pesan ke nomor pengujian (${recipientPhoneNumber}) dari sini untuk memeriksa fungsionalitas.`,
-            sender: 'bot',
-          },
-        ]);
+    if (!recipientPhoneNumber) return;
+
+    const fetchMessages = async () => {
+      try {
+        const history = await getMessages(recipientPhoneNumber);
+        if (history.length > 0) {
+            setMessages(history);
+        } else {
+             setMessages([
+              {
+                id: 'init-message',
+                text: `Halo! Ini adalah dasbor WartaBot. Riwayat obrolan dengan ${recipientPhoneNumber} akan muncul di sini.`,
+                sender: 'bot',
+                timestamp: Date.now(),
+              },
+            ]);
+        }
+      } catch (error) {
+        console.error('Failed to load chat history from Firestore', error);
+        toast({
+            variant: 'destructive',
+            title: 'Gagal Memuat Riwayat',
+            description: 'Tidak dapat mengambil riwayat obrolan dari database.',
+        });
       }
-    } catch (error) {
-        console.error('Failed to load chat history', error);
-        setMessages([]);
-    }
-  }, [recipientPhoneNumber]);
-  
-  // Save history to localStorage whenever messages change
-  useEffect(() => {
-    try {
-      localStorage.setItem('wartabot-history', JSON.stringify(messages));
-    } catch (error) {
-        console.error('Failed to save chat history', error);
-    }
-  }, [messages]);
+    };
+
+    fetchMessages();
+    
+    // Optional: Set up a real-time listener with Firestore
+    // This requires more complex setup (onSnapshot) which can be added later.
+
+  }, [recipientPhoneNumber, toast]);
 
   const handleSendMessage = useCallback(async (text: string) => {
     if (!recipientPhoneNumber) {
@@ -80,21 +74,29 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
         return;
     }
 
-    const newMessage: MessageType = { id: Date.now().toString(), text, sender: 'user', recipient: recipientPhoneNumber };
+    const newMessage: MessageType = { 
+        id: Date.now().toString(), 
+        text, 
+        sender: 'user', 
+        recipient: recipientPhoneNumber,
+        timestamp: Date.now() 
+    };
+    
     setMessages((prev) => [...prev, newMessage]);
     setIsBotReplying(true);
     setSmartReplies([]);
 
     try {
-        // Send message via WhatsApp API
-        await sendWhatsappMessage(recipientPhoneNumber, text);
-
-        // NOTE: The bot's reply will come via the webhook to the user's phone,
-        // not directly back to this UI. This is a simulation that the message was sent.
-        console.log('Pesan berhasil dikirim ke WhatsApp. Balasan akan muncul di perangkat pengguna.');
+        // Send message via WhatsApp API AND save to Firestore
+        await Promise.all([
+            sendWhatsappMessage(recipientPhoneNumber, text),
+            saveMessage(recipientPhoneNumber, { text: newMessage.text, sender: 'user', recipient: recipientPhoneNumber, timestamp: newMessage.timestamp })
+        ]);
+        
+        console.log('Pesan berhasil dikirim ke WhatsApp dan disimpan.');
         toast({
             title: 'Pesan Terkirim',
-            description: `Pesan Anda telah dikirim ke ${recipientPhoneNumber}. Balasan akan muncul di WhatsApp.`,
+            description: `Pesan Anda telah dikirim ke ${recipientPhoneNumber}. Balasan akan muncul di sini secara otomatis.`,
         });
 
 
@@ -103,9 +105,9 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
         toast({
             variant: 'destructive',
             title: 'Gagal Mengirim Pesan',
-            description: `Gagal mengirim pesan melalui WhatsApp: ${errorMessage}`,
+            description: `Gagal mengirim atau menyimpan pesan: ${errorMessage}`,
         });
-        // Remove the message from UI if it failed to send
+        // Remove the message from UI if it failed to send/save
         setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
     } finally {
         setIsBotReplying(false);
