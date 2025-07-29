@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
 import { LogOut, MoreVertical } from 'lucide-react';
+import { sendWhatsappMessage } from '@/lib/whatsapp-service';
 
 const fixedRules = "Jika pengguna bertanya tentang cuaca, katakan Anda tidak tahu. Jika pengguna menyapa, balas sapaan dengan ramah. Untuk pertanyaan lain, katakan 'Saya adalah bot sederhana'.";
 
@@ -53,15 +54,23 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
-    const userMessage: MessageType = { id: crypto.randomUUID(), text, sender: 'user' };
+    // Nomor telepon pengguna akan dibutuhkan di sini. Untuk saat ini, kita gunakan placeholder.
+    const userPhoneNumber = 'USER_PHONE_NUMBER_PLACEHOLDER'; 
+
+    const userMessage: MessageType = { id: crypto.randomUUID(), text, sender: 'user', recipient: userPhoneNumber };
     setMessages(prev => [...prev, userMessage]);
     setIsBotReplying(true);
     setSmartReplies([]);
 
     try {
+      // 1. Hasilkan balasan otomatis menggunakan AI
       const { reply } = await generateAutomaticReply({ message: text, rules: fixedRules });
-      const botMessage: MessageType = { id: crypto.randomUUID(), text: reply, sender: 'bot' };
+      const botMessage: MessageType = { id: crypto.randomUUID(), text: reply, sender: 'bot', recipient: userPhoneNumber };
       
+      // 2. Kirim balasan ke WhatsApp
+      await sendWhatsappMessage(userPhoneNumber, reply);
+
+      // 3. Perbarui UI dengan balasan bot dan saran balasan cerdas
       const fullHistory = [...messages, userMessage, botMessage];
       setMessages(fullHistory);
       
@@ -70,13 +79,18 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
       setSmartReplies(suggestedReplies);
 
     } catch (error) {
-      console.error("Error generating reply:", error);
-      const errorMessage: MessageType = { id: crypto.randomUUID(), text: "Maaf, terjadi kesalahan saat menghasilkan balasan.", sender: 'bot' };
+      console.error("Error generating or sending reply:", error);
+      const errorMessageText = (error instanceof Error && error.message.includes('WhatsApp'))
+        ? "Gagal mengirim pesan ke WhatsApp."
+        : "Maaf, terjadi kesalahan saat menghasilkan balasan.";
+        
+      const errorMessage: MessageType = { id: crypto.randomUUID(), text: errorMessageText, sender: 'bot', recipient: userPhoneNumber };
       setMessages(prev => [...prev, errorMessage]);
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Gagal berkomunikasi dengan AI.",
+        description: "Gagal berkomunikasi dengan AI atau WhatsApp.",
       });
     } finally {
       setIsBotReplying(false);
