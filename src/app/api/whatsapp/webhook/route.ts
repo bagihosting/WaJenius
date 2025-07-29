@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
     return new NextResponse(challenge, { status: 200 });
   } else {
     console.error('Webhook verification failed.');
+    if (token !== VERIFY_TOKEN) {
+      console.error('Verify tokens do not match.');
+    }
     return new NextResponse('Forbidden', { status: 403 });
   }
 }
@@ -65,6 +68,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error processing WhatsApp webhook:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new NextResponse(JSON.stringify({ error: 'Failed to process webhook', details: errorMessage }), { status: 500 });
-  }
-}
+    return new NextResponse(JSON.stringify({ error: 'Failed to process webhook', details: errorMessage
