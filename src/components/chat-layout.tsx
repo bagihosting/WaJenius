@@ -1,119 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageList } from '@/components/message-list';
-import { MessageInput } from '@/components/message-input';
-import { generateAutomaticReply } from '@/ai/flows/automatic-replies';
-import { generateSmartReplies } from '@/ai/flows/smart-replies';
-import { improvePrompt } from '@/ai/flows/improve-prompt';
 import type { Message as MessageType } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
-import { LogOut, MoreVertical } from 'lucide-react';
-import { sendWhatsappMessage } from '@/lib/whatsapp-service';
-
-// Aturan ini sekarang lebih umum, karena logika utama ada di webhook.
-const fixedRules = "Anda adalah asisten AI yang ramah. Jawab pertanyaan dengan singkat dan jelas. Jika Anda tidak tahu jawabannya, katakan Anda akan mencarinya.";
+import { LogOut, MoreVertical, Send } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import Image from 'next/image';
 
 type ChatLayoutProps = {
   onDisconnect: () => void;
 };
 
 export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
-  const [messages, setMessages] = useState<MessageType[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [smartReplies, setSmartReplies] = useState<string[]>([]);
-  const [isBotReplying, setIsBotReplying] = useState(false);
-  const [isImproving, setIsImproving] = useState(false);
-  const { toast } = useToast();
-
+  
   useEffect(() => {
     setIsMounted(true);
-    try {
-      const storedMessages = localStorage.getItem('chatterjet-history');
-      if (storedMessages) {
-        setMessages(JSON.parse(storedMessages));
-      }
-    } catch (error) {
-      console.error('Failed to parse messages from localStorage', error);
-    }
   }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      try {
-        localStorage.setItem('chatterjet-history', JSON.stringify(messages));
-      } catch (error) {
-        console.error('Failed to save messages to localStorage', error);
-      }
-    }
-  }, [messages, isMounted]);
-
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
-
-    // Untuk UI, kita asumsikan nomor telepon bot adalah penerimanya.
-    const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER_ID || 'WHATSAPP_BOT';
-
-    const userMessage: MessageType = { id: crypto.randomUUID(), text, sender: 'user', recipient: botPhoneNumber };
-    setMessages(prev => [...prev, userMessage]);
-    setIsBotReplying(true);
-    setSmartReplies([]);
-
-    try {
-      // Di UI, kita mensimulasikan bot merespons, tetapi logika sebenarnya ada di webhook.
-      const { reply } = await generateAutomaticReply({ message: text, rules: fixedRules });
-      const botMessage: MessageType = { id: crypto.randomUUID(), text: reply, sender: 'bot', recipient: 'user' };
-      
-      // UI diperbarui untuk menampilkan percakapan, tetapi tidak lagi mengirim pesan dari sini.
-      // Pengiriman pesan kini ditangani oleh interaksi pengguna langsung dengan nomor WhatsApp Anda.
-      
-      const fullHistory = [...messages, userMessage, botMessage];
-      setMessages(fullHistory);
-      
-      const messageHistoryText = fullHistory.map(m => `${m.sender}: ${m.text}`).join('\n');
-      const { suggestedReplies } = await generateSmartReplies({ messageHistory: messageHistoryText, currentMessage: reply });
-      setSmartReplies(suggestedReplies);
-
-    } catch (error) {
-      console.error("Error generating reply for UI:", error);
-      const errorMessageText = "Maaf, terjadi kesalahan saat menghasilkan pratinjau balasan.";
-        
-      const errorMessage: MessageType = { id: crypto.randomUUID(), text: errorMessageText, sender: 'bot', recipient: 'user' };
-      setMessages(prev => [...prev, errorMessage]);
-      
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal berkomunikasi dengan AI.",
-      });
-    } finally {
-      setIsBotReplying(false);
-    }
-  };
-
-  const handleImprovePrompt = async (prompt: string): Promise<string> => {
-    if (!prompt.trim()) return prompt;
-    setIsImproving(true);
-    try {
-      const { improvedPrompt } = await improvePrompt({ prompt });
-      return improvedPrompt;
-    } catch (error) {
-      console.error("Error improving prompt:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal meningkatkan prompt.",
-      });
-      return prompt;
-    } finally {
-      setIsImproving(false);
-    }
-  };
-  
   return (
     <div className="flex flex-col h-screen w-full max-w-4xl bg-card border-x shadow-2xl animate-in fade-in duration-500">
       <header className="flex items-center justify-between p-4 border-b shrink-0">
@@ -150,13 +57,27 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
             </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      <MessageList messages={messages} isBotReplying={isBotReplying} />
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        onImprovePrompt={handleImprovePrompt}
-        smartReplies={smartReplies}
-        isImproving={isImproving}
-      />
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-muted/40">
+        <Card className="w-full max-w-md animate-in fade-in-50 slide-in-from-bottom-5 duration-500">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-center gap-3">
+              <Image src="/whatsapp-logo.svg" alt="WhatsApp Logo" width="32" height="32" data-ai-hint="WhatsApp logo"/>
+              Terhubung ke WhatsApp!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Bot Anda sekarang aktif. Buka aplikasi WhatsApp di ponsel Anda dan kirim pesan ke nomor yang telah Anda daftarkan.
+            </p>
+            <p className="text-sm text-foreground font-medium bg-primary/10 p-3 rounded-lg">
+              Nomor Bot: {process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER || '(Nomor tidak dikonfigurasi)'}
+            </p>
+            <div className="flex justify-center pt-2">
+              <Send className="w-10 h-10 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
