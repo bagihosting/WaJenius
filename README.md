@@ -7,6 +7,7 @@ Ini adalah aplikasi dasbor dan backend untuk bot WhatsApp yang didukung oleh AI,
 *   **Backend WhatsApp Webhook:** Menerima dan membalas pesan secara real-time.
 *   **Integrasi AI:** Menggunakan Genkit untuk menghasilkan balasan cerdas.
 *   **Dasbor Web:** Antarmuka untuk mengirim pesan dan mengelola bot.
+*   **Penyimpanan Cloud:** Terintegrasi dengan Google Cloud Firestore untuk menyimpan riwayat percakapan.
 *   **Aman:** Verifikasi webhook menggunakan `WHATSAPP_APP_SECRET`.
 
 ---
@@ -139,7 +140,7 @@ Aplikasi Anda sekarang berjalan di `http://[ALAMAT_IP_SERVER_ANDA]:9002`. Namun,
 
 Aplikasi Anda sekarang sepenuhnya terhubung dan siap merespons pesan WhatsApp secara otomatis.
 
-### Langkah 8: (Opsional tapi Sangat Direkomendasikan) Konfigurasi Nginx dengan Subdomain
+### Langkah 8: (Sangat Direkomendasikan) Konfigurasi Nginx dengan Subdomain
 
 Menggunakan Nginx sebagai *reverse proxy* adalah praktik terbaik untuk keamanan dan manajemen.
 
@@ -215,3 +216,31 @@ sudo certbot --nginx -d bot.domainanda.com
 Certbot akan secara otomatis mengedit file konfigurasi Nginx Anda untuk menambahkan pengaturan SSL dan mengatur pembaruan otomatis.
 
 Setelah selesai, Nginx akan melayani aplikasi Anda di `https://bot.domainanda.com`.
+
+### Langkah 9: (Penting) Konfigurasi Cloud Firestore
+
+Aplikasi ini menggunakan Google Cloud Firestore untuk menyimpan riwayat percakapan. Anda harus mengaktifkannya di Firebase Console.
+
+1.  **Buka Firebase Console:** Navigasi ke [Firebase Console](https://console.firebase.google.com/) dan pilih proyek Anda (`chatterjet`).
+2.  **Pilih Cloud Firestore:** Dari menu di sebelah kiri, klik "Build" -> "Firestore Database".
+3.  **Buat Database:** Klik tombol "Create database".
+4.  **Mulai dalam Mode Produksi:** Pilih "Start in **production mode**". Ini lebih aman. Klik "Next".
+5.  **Pilih Lokasi:** Pilih lokasi Cloud Firestore yang paling dekat dengan server atau pengguna Anda. Klik "Enable".
+6.  **Ubah Aturan Keamanan:**
+    *   Setelah database dibuat, buka tab "Rules".
+    *   Ganti aturan default dengan aturan berikut untuk mengizinkan aplikasi Anda membaca dan menulis data. **PERHATIAN:** Aturan ini bersifat permisif. Untuk produksi nyata, Anda harus memperketat aturan ini sesuai kebutuhan keamanan Anda.
+    
+    ```
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        // Izinkan baca dan tulis ke koleksi 'conversations' dan subkoleksinya
+        match /conversations/{userId}/{document=**} {
+          allow read, write: if true; 
+        }
+      }
+    }
+    ```
+    *   Klik "Publish" untuk menyimpan aturan baru.
+
+Database Anda sekarang siap untuk digunakan oleh aplikasi WartaBot.
