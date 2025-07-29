@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
             'fs': false,
             'os': false,
             'crypto': false,
+            'net': false,
+            'tls': false,
         };
     }
 
