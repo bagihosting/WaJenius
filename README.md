@@ -58,7 +58,17 @@ git clone [URL_GIT_REPOSITORY_ANDA] wartabot
 cd wartabot
 ```
 
-### Langkah 4: Konfigurasi Variabel Lingkungan (.env)
+### Langkah 4: Buat Kredensial Firebase Admin (Penting)
+
+Backend aplikasi ini menggunakan Firebase Admin SDK untuk berinteraksi secara aman dengan Firestore. Ini memerlukan file kunci akun layanan (service account key).
+
+1.  **Buka Google Cloud Console:** Navigasi ke [IAM & Admin > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) di Google Cloud Console. Pastikan Anda telah memilih proyek Firebase (`chatterjet`) Anda.
+2.  **Pilih Akun Layanan:** Temukan akun layanan dengan nama yang mirip seperti `firebase-adminsdk-...` atau buat yang baru. Akun ini harus memiliki peran **Editor** atau peran lain yang memberikan izin untuk mengakses Firestore.
+3.  **Buat Kunci Baru:** Klik pada akun layanan, lalu buka tab "Keys". Klik "Add Key" -> "Create new key".
+4.  **Pilih JSON:** Pilih tipe kunci **JSON** dan klik "Create". Sebuah file `.json` akan diunduh secara otomatis.
+5.  **Amankan Kunci:** Jaga kerahasiaan file ini! **Jangan pernah** memasukkannya ke dalam repositori Git Anda.
+
+### Langkah 5: Konfigurasi Variabel Lingkungan (.env)
 
 Buat file `.env` di dalam direktori proyek.
 
@@ -66,7 +76,7 @@ Buat file `.env` di dalam direktori proyek.
 nano .env
 ```
 
-Salin dan tempel konfigurasi berikut ke dalam file tersebut. **Pastikan untuk mengisi semua nilai placeholder dengan kredensial asli dari Meta Developer Dashboard Anda.**
+Salin dan tempel konfigurasi berikut.
 
 ```
 # Kredensial WhatsApp Business API dari Meta Developer Dashboard
@@ -84,11 +94,19 @@ NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER=YOUR_WHATSAPP_NUMBER
 # Nomor telepon penerima untuk pengujian dari dasbor
 # Contoh: 6281234567890
 NEXT_PUBLIC_WHATSAPP_RECIPIENT_PHONE_NUMBER=YOUR_RECIPIENT_NUMBER
+
+# Kredensial Firebase Admin SDK
+# Buka file JSON yang Anda unduh, salin SELURUH isinya, dan tempel di sini.
+# Pastikan tidak ada baris baru yang tidak perlu.
+FIREBASE_SERVICE_ACCOUNT_KEY={"type": "service_account", "project_id": "...", ...}
+
 ```
+*   **Isi `FIREBASE_SERVICE_ACCOUNT_KEY`:** Buka file JSON yang baru saja Anda unduh. Salin seluruh kontennya dan tempelkan sebagai nilai untuk `FIREBASE_SERVICE_ACCOUNT_KEY`. Pastikan semuanya berada dalam satu baris.
+*   **Isi kredensial WhatsApp lainnya.**
 
 Simpan file dan keluar (tekan `Ctrl+X`, lalu `Y`, lalu `Enter`).
 
-### Langkah 5: Instal Dependensi dan Build Aplikasi
+### Langkah 6: Instal Dependensi dan Build Aplikasi
 
 Instal semua paket yang diperlukan dan build aplikasi untuk produksi.
 
@@ -99,7 +117,7 @@ npm run build
 
 Proses `build` akan mengoptimalkan aplikasi Anda untuk performa terbaik.
 
-### Langkah 6: Instal PM2 dan Jalankan Aplikasi
+### Langkah 7: Instal PM2 dan Jalankan Aplikasi
 
 Untuk memastikan aplikasi Anda terus berjalan di latar belakang, gunakan manajer proses seperti `pm2`.
 
@@ -125,7 +143,7 @@ pm2 save
 sudo pm2 startup
 ```
 
-### Langkah 7: Konfigurasi Webhook di Meta Developer Dashboard
+### Langkah 8: Konfigurasi Webhook di Meta Developer Dashboard
 
 Aplikasi Anda sekarang berjalan di `http://[ALAMAT_IP_SERVER_ANDA]:9002`. Namun, untuk produksi, Anda harus menggunakan URL HTTPS yang disediakan oleh Nginx dan subdomain Anda.
 
@@ -140,7 +158,7 @@ Aplikasi Anda sekarang berjalan di `http://[ALAMAT_IP_SERVER_ANDA]:9002`. Namun,
 
 Aplikasi Anda sekarang sepenuhnya terhubung dan siap merespons pesan WhatsApp secara otomatis.
 
-### Langkah 8: (Sangat Direkomendasikan) Konfigurasi Nginx dengan Subdomain
+### Langkah 9: (Sangat Direkomendasikan) Konfigurasi Nginx dengan Subdomain
 
 Menggunakan Nginx sebagai *reverse proxy* adalah praktik terbaik untuk keamanan dan manajemen.
 
@@ -217,7 +235,7 @@ Certbot akan secara otomatis mengedit file konfigurasi Nginx Anda untuk menambah
 
 Setelah selesai, Nginx akan melayani aplikasi Anda di `https://bot.domainanda.com`.
 
-### Langkah 9: (Penting) Konfigurasi Cloud Firestore
+### Langkah 10: (Penting) Konfigurasi Cloud Firestore
 
 Aplikasi ini menggunakan Google Cloud Firestore untuk menyimpan riwayat percakapan. Anda harus mengaktifkannya di Firebase Console.
 
@@ -226,21 +244,6 @@ Aplikasi ini menggunakan Google Cloud Firestore untuk menyimpan riwayat percakap
 3.  **Buat Database:** Klik tombol "Create database".
 4.  **Mulai dalam Mode Produksi:** Pilih "Start in **production mode**". Ini lebih aman. Klik "Next".
 5.  **Pilih Lokasi:** Pilih lokasi Cloud Firestore yang paling dekat dengan server atau pengguna Anda. Klik "Enable".
-6.  **Ubah Aturan Keamanan:**
-    *   Setelah database dibuat, buka tab "Rules".
-    *   Ganti aturan default dengan aturan berikut untuk mengizinkan aplikasi Anda membaca dan menulis data. **PERHATIAN:** Aturan ini bersifat permisif. Untuk produksi nyata, Anda harus memperketat aturan ini sesuai kebutuhan keamanan Anda.
-    
-    ```
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
-        // Izinkan baca dan tulis ke koleksi 'conversations' dan subkoleksinya
-        match /conversations/{userId}/{document=**} {
-          allow read, write: if true; 
-        }
-      }
-    }
-    ```
-    *   Klik "Publish" untuk menyimpan aturan baru.
+6.  **Aturan Keamanan (Tidak Perlu Diubah):** Karena backend kita sekarang menggunakan Firebase Admin SDK, ia akan melewati aturan keamanan. Anda dapat membiarkan aturan default yang memblokir semua akses klien, yang lebih aman.
 
 Database Anda sekarang siap untuk digunakan oleh aplikasi WartaBot.

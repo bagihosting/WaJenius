@@ -1,10 +1,22 @@
 // src/lib/firestore-service.ts
-import { firestore } from './firebase';
-import { collection, addDoc, query, orderBy, getDocs, Timestamp, where } from 'firebase/firestore';
+import { firestore, getAdminFirestore } from './firebase';
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  getDocs, 
+  Timestamp, 
+  serverTimestamp
+} from 'firebase/firestore';
 import type { Message } from './types';
+import type { Firestore, DocumentReference, QuerySnapshot, CollectionReference } from 'firebase-admin/firestore';
 
 const CONVERSATIONS_COLLECTION = 'conversations';
 const MESSAGES_SUBCOLLECTION = 'messages';
+
+// Menentukan apakah kode berjalan di server
+const isServer = typeof window === 'undefined';
 
 /**
  * Menyimpan pesan ke subkoleksi pesan dari percakapan tertentu.
@@ -13,15 +25,30 @@ const MESSAGES_SUBCOLLECTION = 'messages';
  */
 export async function saveMessage(phoneNumber: string, message: Omit<Message, 'id' | 'timestamp'> & { timestamp?: number }): Promise<void> {
   try {
-    const conversationRef = collection(firestore, CONVERSATIONS_COLLECTION, phoneNumber, MESSAGES_SUBCOLLECTION);
+    let conversationRef: CollectionReference | FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
+    let docData;
+
+    if (isServer) {
+        // --- Logika sisi server menggunakan Admin SDK ---
+        const adminDb: Firestore = getAdminFirestore();
+        conversationRef = adminDb.collection(CONVERSATIONS_COLLECTION).doc(phoneNumber).collection(MESSAGES_SUBCOLLECTION);
+        docData = {
+            ...message,
+            // Admin SDK menggunakan objeknya sendiri untuk timestamp
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        await conversationRef.add(docData);
+    } else {
+        // --- Logika sisi klien menggunakan Client SDK ---
+        conversationRef = collection(firestore, CONVERSATIONS_COLLECTION, phoneNumber, MESSAGES_SUBCOLLECTION);
+        docData = {
+            ...message,
+            // Client SDK menggunakan fungsi yang diimpor
+            timestamp: serverTimestamp(),
+        };
+        await addDoc(conversationRef, docData);
+    }
     
-    // Firestore akan secara otomatis menangani konversi timestamp
-    const docData = {
-        ...message,
-        timestamp: Timestamp.fromMillis(message.timestamp || Date.now()),
-    };
-    
-    await addDoc(conversationRef, docData);
     console.log(`Pesan untuk ${phoneNumber} berhasil disimpan ke Firestore.`);
   } catch (error) {
     console.error(`Gagal menyimpan pesan untuk ${phoneNumber} ke Firestore:`, error);
@@ -36,20 +63,34 @@ export async function saveMessage(phoneNumber: string, message: Omit<Message, 'i
  */
 export async function getMessages(phoneNumber: string): Promise<Message[]> {
   try {
-    const messagesRef = collection(firestore, CONVERSATIONS_COLLECTION, phoneNumber, MESSAGES_SUBCOLLECTION);
-    const q = query(messagesRef, orderBy('timestamp', 'asc'));
-    
-    const querySnapshot = await getDocs(q);
+    let querySnapshot: QuerySnapshot | FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>;
+
+    if (isServer) {
+        // --- Logika sisi server menggunakan Admin SDK ---
+        const adminDb = getAdminFirestore();
+        const messagesRef = adminDb.collection(CONVERSATIONS_COLLECTION).doc(phoneNumber).collection(MESSAGES_SUBCOLLECTION);
+        const q = messagesRef.orderBy('timestamp', 'asc');
+        querySnapshot = await q.get();
+
+    } else {
+        // --- Logika sisi klien menggunakan Client SDK ---
+        const messagesRef = collection(firestore, CONVERSATIONS_COLLECTION, phoneNumber, MESSAGES_SUBCOLLECTION);
+        const q = query(messagesRef, orderBy('timestamp', 'asc'));
+        querySnapshot = await getDocs(q);
+    }
     
     const messages: Message[] = querySnapshot.docs.map(doc => {
       const data = doc.data();
+      // Admin dan Client SDK memiliki cara berbeda untuk menangani timestamp
+      const timestamp = data.timestamp;
+      const millis = timestamp && typeof timestamp.toMillis === 'function' ? timestamp.toMillis() : (timestamp?._seconds * 1000 + timestamp?._nanoseconds / 1000000) || Date.now();
+
       return {
         id: doc.id,
         text: data.text,
         sender: data.sender,
         recipient: data.recipient,
-        // Konversi Firestore Timestamp ke Unix timestamp (milidetik)
-        timestamp: (data.timestamp as Timestamp).toMillis(),
+        timestamp: millis,
       } as Message;
     });
 
