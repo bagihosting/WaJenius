@@ -60,15 +60,13 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (connectionStatus === 'scanning') {
-      // Simulate connecting after a delay
       timer = setTimeout(() => setConnectionStatus('connecting'), 4000);
     } else if (connectionStatus === 'connecting') {
-      // Simulate connection success after a delay
       timer = setTimeout(() => {
-        setConnectionStatus('connected');
+        // Randomly succeed or fail for a more realistic feel
+        Math.random() > 0.2 ? setConnectionStatus('connected') : setConnectionStatus('error');
       }, 3000);
     } else if(connectionStatus === 'connected') {
-        // Automatically proceed to chat after a short delay
         timer = setTimeout(() => {
             onConnect();
         }, 1500);
@@ -79,22 +77,25 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
   
   const handleButtonClick = () => {
     if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
-      setQrKey(Date.now()); // Refresh QR code
+      setQrKey(Date.now());
       setConnectionStatus('scanning');
     }
   };
 
   return (
     <Card className="w-full max-w-md mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-      <CardHeader className="text-center">
-        <CardTitle className={cn("text-3xl font-headline tracking-tight transition-colors", currentStatus.color)}>
+      <CardHeader className="text-center pb-4">
+        <div className="flex justify-center items-center mb-4">
+            <Image src="/logo.svg" alt="ChatterJet Logo" width="64" height="64" />
+        </div>
+        <CardTitle className={cn("text-2xl font-bold tracking-tight transition-colors", currentStatus.color)}>
           {currentStatus.title}
         </CardTitle>
         <CardDescription className="pt-2 min-h-[40px]">{currentStatus.description}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-6">
-        <div className={cn("p-4 bg-white rounded-lg border-2 shadow-inner transition-opacity duration-300", 
-          (connectionStatus === 'connecting' || connectionStatus === 'connected') && 'opacity-20'
+        <div className={cn("p-2 bg-white rounded-lg border-2 shadow-inner transition-opacity duration-300", 
+          (connectionStatus !== 'disconnected' && connectionStatus !== 'scanning') && 'opacity-20'
         )}>
           <Image
             key={qrKey}
@@ -104,6 +105,7 @@ export function QrConnect({ onConnect, connectionStatus, setConnectionStatus }: 
             height={256}
             priority
             data-ai-hint="QR code"
+            className="rounded-md"
           />
         </div>
         <Button 

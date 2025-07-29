@@ -7,10 +7,9 @@ import { generateAutomaticReply } from '@/ai/flows/automatic-replies';
 import { generateSmartReplies } from '@/ai/flows/smart-replies';
 import { improvePrompt } from '@/ai/flows/improve-prompt';
 import type { Message as MessageType } from '@/lib/types';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
 import { LogOut, MoreVertical } from 'lucide-react';
@@ -108,13 +107,13 @@ export function ChatLayout({ onDisconnect }: ChatLayoutProps) {
       <header className="flex items-center justify-between p-4 border-b shrink-0">
         <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 border-2 border-primary/50">
-                <Image src="https://placehold.co/48x48.png" alt="ChatterJet Logo" width={48} height={48} data-ai-hint="logo abstract" />
+                <AvatarImage src="/logo.svg" alt="ChatterJet Logo" />
                 <AvatarFallback>CJ</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-                <h1 className="text-xl font-bold font-headline text-foreground">ChatterJet</h1>
+                <h1 className="text-xl font-bold text-foreground">ChatterJet</h1>
                 <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="border-green-500 text-green-600 bg-green-500/10">
+                    <Badge variant="outline" className="border-green-500/40 text-green-600 bg-green-500/10">
                         <span className="relative flex h-2 w-2 mr-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
